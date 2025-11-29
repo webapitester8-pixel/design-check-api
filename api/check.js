@@ -1,5 +1,5 @@
 export const config = {
-  runtime: "nodejs20.x"
+  runtime: "nodejs"
 };
 
 export default async function handler(req, res) {
@@ -20,6 +20,9 @@ export default async function handler(req, res) {
     });
 
   } catch (err) {
-    return res.status(500).json({ error: "Failed to fetch website", details: err.message });
+    return res.status(500).json({
+      error: "Failed to fetch website",
+      details: err.message
+    });
   }
 }
