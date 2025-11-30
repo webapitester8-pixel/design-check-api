@@ -1,55 +1,29 @@
-export const config = {
-  runtime: "edge",
-};
+export default async function handler(req, res) {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
-export default async function handler(req) {
-  const origin = req.headers.get("origin") || "*";
-
-  const corsHeaders = {
-    "Access-Control-Allow-Origin": origin, 
-    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization",
-    "Access-Control-Allow-Credentials": "true",
-    "Vary": "Origin",
-  };
-
-  // Handle preflight
   if (req.method === "OPTIONS") {
-    return new Response(null, { status: 200, headers: corsHeaders });
+    return res.status(200).end();
+  }
+
+  const url = req.query.url;
+
+  if (!url) {
+    return res.status(400).json({ status: "error", message: "Missing URL" });
   }
 
   try {
-    const { searchParams } = new URL(req.url);
-    const targetUrl = searchParams.get("url");
-
-    if (!targetUrl)
-      return new Response(
-        JSON.stringify({ error: "URL missing" }),
-        { status: 400, headers: corsHeaders }
-      );
-
-    const response = await fetch(targetUrl);
+    const response = await fetch(url);
     const text = await response.text();
 
-    const data = {
-      url: targetUrl,
+    return res.status(200).json({
       status: "success",
+      url,
       length: text.length,
-      sample: text.substring(0, 200),
-    };
-
-    return new Response(JSON.stringify(data), {
-      status: 200,
-      headers: {
-        ...corsHeaders,
-        "Content-Type": "application/json",
-      },
+      sample: text.substring(0, 500)
     });
-
-  } catch (error) {
-    return new Response(
-      JSON.stringify({ error: "Failed to fetch external site" }),
-      { status: 500, headers: corsHeaders }
-    );
+  } catch (e) {
+    return res.status(500).json({ status: "error", message: "Failed to fetch website" });
   }
 }
