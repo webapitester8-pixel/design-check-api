@@ -1,47 +1,55 @@
 export const config = {
-  runtime: "edge", // required by Vercel for Edge functions
+  runtime: "edge",
 };
 
 export default async function handler(req) {
-  const headers = {
-    "Access-Control-Allow-Origin": "*", // allow requests from anywhere
+  const origin = req.headers.get("origin") || "*";
+
+  const corsHeaders = {
+    "Access-Control-Allow-Origin": origin, 
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Content-Type": "application/json",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    "Access-Control-Allow-Credentials": "true",
+    "Vary": "Origin",
   };
 
-  // handle preflight requests for CORS
+  // Handle preflight
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers });
+    return new Response(null, { status: 200, headers: corsHeaders });
   }
 
   try {
     const { searchParams } = new URL(req.url);
-    const url = searchParams.get("url");
+    const targetUrl = searchParams.get("url");
 
-    if (!url) {
+    if (!targetUrl)
       return new Response(
-        JSON.stringify({ status: "error", message: "URL is required" }),
-        { headers, status: 400 }
+        JSON.stringify({ error: "URL missing" }),
+        { status: 400, headers: corsHeaders }
       );
-    }
 
-    // Fetch website HTML
-    const response = await fetch(url);
-    const html = await response.text();
+    const response = await fetch(targetUrl);
+    const text = await response.text();
 
-    // Minimal analysis (you can expand later)
-    const result = {
-      url,
+    const data = {
+      url: targetUrl,
       status: "success",
-      length: html.length,
-      sample: html.slice(0, 200), // first 200 chars
+      length: text.length,
+      sample: text.substring(0, 200),
     };
 
-    return new Response(JSON.stringify(result), { headers });
+    return new Response(JSON.stringify(data), {
+      status: 200,
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "application/json",
+      },
+    });
+
   } catch (error) {
     return new Response(
-      JSON.stringify({ status: "error", message: error.message }),
-      { headers, status: 500 }
+      JSON.stringify({ error: "Failed to fetch external site" }),
+      { status: 500, headers: corsHeaders }
     );
   }
 }
